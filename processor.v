@@ -14,7 +14,7 @@ adder1out,	//Output of adder which adds PC and 4-add1
 adder2out,	//Output of adder which adds PC+4 and 2 shifted sign-extend result-add2
 sextad;	//Output of shift left 2 unit
 
-reg Z, N; //Status registers
+reg Z, N;
 
 wire [5:0] inst31_26;	//31-26 bits of instruction
 wire [4:0]
@@ -31,7 +31,7 @@ dpack;	//Read data output of memory (data read from memory)
 wire [2:0] gout;	//Output of ALU control unit
 
 wire zout,	//Zero output of ALU
-signout,    //Sign output of ALU
+signout,
 pcsrc,	//Output of AND gate with Branch and ZeroOut inputs
 //Control signals
 regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0;
@@ -94,7 +94,7 @@ pc=out4;
 // alu, adder and control logic connections
 
 //ALU unit
-alu32 alu1(sum,dataa,out2,zout,gout);
+alu32 alu1(sum,dataa,out2,zout,signout,gout);
 
 //adder which adds PC and 4
 adder add1(pc,32'h4,adder1out);
@@ -118,19 +118,13 @@ shift shift2(sextad,extad);
 //AND gate
 assign pcsrc=branch && zout;
 
-//Status Register Control
+//Status registers
 always @(posedge clk)
-begin
-if(signout)
-N = 1;
-else
-N = 0;
+  begin
+    Z = zout ? 1'b1:1'b0;
+    N = signout ? 1'b1:1'b0;
+  end
 
-if(zout)
-Z = 1;
-else
-Z = 0;
-end
 
 //initialize datamemory,instruction memory and registers
 //read initial data from files given in hex

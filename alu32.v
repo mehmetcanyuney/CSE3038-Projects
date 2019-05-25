@@ -5,8 +5,9 @@ input [2:0] gin;//ALU control line
 reg [31:0] sum;
 reg [31:0] less;
 output zout;
+output signout;
 reg zout;
-output reg signout;
+reg signout;
 
 always @(a or b or gin)
 begin
@@ -22,6 +23,6 @@ begin
 	default: sum=31'bx;
 	endcase
 zout=~(|sum);
-signout = sum[31];
+signout=sum[31];
 end
 endmodule

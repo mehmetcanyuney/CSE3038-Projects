@@ -1,7 +1,8 @@
 module processor;
 reg [31:0] pc; //32-bit prograom counter
 reg clk; //clock
-reg [7:0] datmem[0:31],mem[0:31]; //32-size data and instruction memory (8 bit(1 byte) for each location)
+reg [7:0] datmem[0:31]; //32-size data and instruction memory (8 bit(1 byte) for each location)
+reg [7:0] mem[0:255];
 wire [31:0]
 dataa,	//Read data 1 output of Register File
 datab,	//Read data 2 output of Register File
@@ -46,8 +47,9 @@ signout,
 pcsrc,	//Output of AND gate with Branch and ZeroOut inputs
 njumpsrc, //Output of And gate with branch and n status register inputs
 nbalrz, //Output of and gate with balrz and z status register inputs
+nbalmn, //Output of and gate with balmn and n status register inputs
 //Control signals
-regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0,balrz,jr,jrsal,jmadd,balmn;
+regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop0,balrz,jr,jrsal,jmadd,balmn,noupdatestat;
 
 //32-size register file (32 bit(1 word) for each register)
 reg [31:0] registerfile[0:31];
@@ -69,7 +71,7 @@ end
 
 //instruction memory
 //4-byte instruction
- assign instruc={mem[pc[4:0]],mem[pc[4:0]+1],mem[pc[4:0]+2],mem[pc[4:0]+3]};
+ assign instruc={mem[pc],mem[pc+1],mem[pc+2],mem[pc+3]};
  assign inst31_26=instruc[31:26];
  assign inst25_21=instruc[25:21];
  assign inst20_16=instruc[20:16];
@@ -122,16 +124,16 @@ mult2_to_1_32 mult10(out10, sum, dataa, jrsal);
 mult2_to_1_32 mult11(out11, out9, dpack, jmadd);
 
 //mux with (balmn & dataadress) Control
-mult2_to_1_32 mult12(out12, out11, dpack, balmn);
+mult2_to_1_32 mult12(out12, out11, dpack, nbalmn);
 
 //mux with (balmn & datab) control
-mult2_to_1_32 mult13(out13, out7, adder1out, balmn);
+mult2_to_1_32 mult13(out13, out7, adder1out, (nbalmn | jmadd));
 
 // load pc
 always @(negedge clk)
 begin
   pc=out12;
-  if(jrsal)
+  if(jrsal) //due to not lose information in memory
   begin
     datmem[out10[4:0]+3]=adder1out[7:0];
     datmem[out10[4:0]+2]=adder1out[15:8];
@@ -153,7 +155,7 @@ adder add2(adder1out,sextad,adder2out);
 
 //Control unit
 control cont(instruc[31:26],instruc[5:0],regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,
-aluop1,aluop0,balrz,jr,jrsal,jmadd,balmn);
+aluop1,aluop0,balrz,jr,jrsal,jmadd,balmn,noupdatestat);
 
 //Sign extend unit
 signext sext(instruc[15:0],extad);
@@ -167,6 +169,7 @@ shift shift2(sextad,extad);
 //Shift-left 2 unit
 shift shift2_2(pseudojumpshifted, {{6{instruc[25]}} ,instruc[25:0]});
 
+//pseudojump format prepared
 assign pseudojump = {adder1out[31:28], pseudojumpshifted[27:0]};
 
 //AND gate
@@ -178,11 +181,17 @@ assign njumpsrc=branch && N;
 //AND gate
 assign nbalrz=balrz && Z;
 
+//AND gate
+assign nbalmn=balmn && N;
+
 //Status registers
 always @(posedge clk)
   begin
-    Z = zout ? 1'b1:1'b0;
-    N = signout ? 1'b1:1'b0;
+    if(~noupdatestat) //if instruction == balmn, we need to keep old status registers (balmn also uses ALU), so that we freeze the update state
+    begin
+      Z = zout ? 1'b1:1'b0;
+      N = signout ? 1'b1:1'b0;
+    end
   end
 
 

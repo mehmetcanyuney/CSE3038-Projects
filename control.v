@@ -1,7 +1,7 @@
-module control(in,funcin,regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop2,balrz,jr,jrsal,jmadd,balmn);
+module control(in,funcin,regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop2,balrz,jr,jrsal,jmadd,balmn,noupdatestat);
 input [5:0] in;
 input [5:0] funcin;
-output regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop2,balrz,jr,jrsal,jmadd,balmn;
+output regdest,alusrc,memtoreg,regwrite,memread,memwrite,branch,aluop1,aluop2,balrz,jr,jrsal,jmadd,balmn,noupdatestat;
 wire rformat,lw,sw,beq,bn,brz,jumpreg,jrs,jma,blm;
 assign rformat=~|in;
 assign lw=in[5]& (~in[4])&(~in[3])&(~in[2])&in[1]&in[0];
@@ -16,9 +16,9 @@ assign blm=in[5]&(~in[4])&(~in[3])&in[2]&(~in[1])&(~in[0]);
 
 
 assign regdest=rformat;
-assign alusrc=lw|sw;
+assign alusrc=lw|sw|blm;
 assign memtoreg=lw;
-assign regwrite=(lw|blm) | (~jumpreg && rformat) | (~jma && rformat);
+assign regwrite=(lw|blm) | (~jumpreg && rformat);
 assign memread=lw|jrs|jma;
 assign memwrite=sw;
 assign branch=beq|bn;
@@ -29,4 +29,5 @@ assign jr=jumpreg && rformat;
 assign jrsal=jrs;
 assign jmadd=jma && rformat;
 assign balmn=blm;
+assign noupdatestat=blm|bn;
 endmodule

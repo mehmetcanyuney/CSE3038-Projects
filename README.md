@@ -1,4 +1,5 @@
-# CSE3038Project2
+# CSE3038-Projects
+Introduction to Signals and Systems Projects
 
 - Question 1 - Convolution with Matlab
 - Question 2 - Face Detection with Python
